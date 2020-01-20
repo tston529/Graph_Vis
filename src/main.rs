@@ -147,7 +147,7 @@ fn main() {
     let nums: [i32; 25] = array_vec.into_inner().unwrap();
 
     // let nums: [i32; 14] = [2, 3, 8, 6, 2, 5, 1, 8, 4, 6, 9, 1, 7, 3];
-
+    
     let mut cursor = prep_graph(&nums);
 
     let graph_height = cursor.y as i32;
@@ -170,7 +170,7 @@ fn main() {
         }
 
         draw_graph(&mut cursor, &nums[x as usize..], &graph_height, tt);
-        println!();
+        print!("\n");
         cursor.ret_cursor_pos();
 
         thread::sleep(time::Duration::from_millis(200));
@@ -180,7 +180,6 @@ fn main() {
 }
 
 fn prep_graph(arr: &[i32]) -> Cursor {
-    // let min = find_min(arr);
     let max = find_max(arr);
 
     let y_height = max+2;
@@ -189,7 +188,7 @@ fn prep_graph(arr: &[i32]) -> Cursor {
     // let line_height = (y_height as f32/GRAPH_HEIGHT as f32) as i32;
 
     // PRINT THE BOUNDARIES OF THE GRAPH
-    println!();
+    print!("\n\n\n");
 
     for _ in 0..y_height {
         println!("|");
@@ -206,11 +205,11 @@ fn prep_graph(arr: &[i32]) -> Cursor {
     for _ in 0..sz {
         print!("-");
     }
-    println!();
+    print!("\n\n\n");
 
     // Move the cursor to the beginning of the previous line,
     //   drawing occurs relative to the bottom of the graph.
-    CursorDir::move_cursor(CursorDir::Up(1));
+    CursorDir::move_cursor(CursorDir::Up(3));
 
     let cursor = Cursor{x: 0, y: y_height as i16, last_x: 0, last_y: 0, graph_size: sz, cursor_dir: None};
 
@@ -301,17 +300,12 @@ fn draw_lines(cursor: &mut Cursor, next_point: Point) {
         	_ => {},
         }
 
+        // If we preemptively reached the next point, no point
+        //  in continuing.
         if cursor.past_graph() {
             break;
         }
 
-        // If we preemptively reached the next point, no point
-        //  in continuing.
-        if (dy < 0 && cursor.y <= next_point.y && cursor.x >= next_point.x) || 
-           (dy > 0 && cursor.y >= next_point.y && cursor.x >= next_point.x) || 
-        	cursor.x > next_point.x {
-            break;
-        }
 
         // ensure the cursor doesn't print past its target
         //  by moving the cursor 
