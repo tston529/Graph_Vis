@@ -28,4 +28,4 @@ It's on my to-do list.
 * **Tyler Stoney** - *Initial work*
 Feel free to use this.  Kudos if you give me credit, a wag of the finger and a 'tsk tsk' from me if you don't.
 
-[screenie]: https://github.com/tston529/raw/master/images/screenshot_1_20_20.png
+[screenie]: https://raw.githubusercontent.com/tston529/Graph_Vis/master/images/screenshot_1_20_20.png
