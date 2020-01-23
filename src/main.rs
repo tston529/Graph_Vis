@@ -1,10 +1,10 @@
-#![allow(warnings)]
+//#![allow(warnings)]
+#![deny(clippy::all)]
 
 use rand::Rng;
 use arrayvec;
-use std::fmt;
-use std::cmp::PartialEq;
 use std::{thread, time};
+use std::cmp::Ordering;
 
 const _GRAPH_HEIGHT: i32 = 10;
 const GRAPH_WIDTH: usize = 10; // How many points are visible at one time
@@ -13,124 +13,7 @@ const POINT_CHAR: char = 'X';
 const HORIZ_SPACING: usize = 5;
 const X_BUFFER: usize = 2;
 
-struct Cursor {
-	x: i16,
-	y: i16,
-    last_x: i16,
-    last_y: i16,
-    graph_size: usize,
-	cursor_dir: Option<CursorDir>,
-}
-
-impl Cursor {
-    fn save_cursor_pos(&mut self) {
-        self.last_x = self.x;
-        self.last_y = self.y;
-        CursorDir::save_cursor_pos();
-    }
-
-    fn ret_cursor_pos(&mut self) {
-        self.x = self.last_x;
-        self.y = self.last_y;
-        CursorDir::ret_cursor_pos();
-    }
-
-    fn before_origin(&self) -> bool {
-        self.y > 0 && self.x > 0
-    }
-
-    fn past_graph(&self) -> bool {
-        self.x > self.graph_size as i16 
-    }
-
-	fn move_cursor(&mut self) {
-		let dir = self.cursor_dir.unwrap();
-	    match dir {
-	        CursorDir::Up(x) => self.y -= x,
-	        CursorDir::Down(x) => self.y += x,
-	        CursorDir::Right(x) => self.x += x,
-	        CursorDir::Left(x) => self.x -= x,
-	    }
-	    CursorDir::move_cursor(dir);
-	}
-
-	fn move_cur(&mut self, dir: CursorDir) {
-	    match dir {
-	        CursorDir::Up(x) => self.y -= x,
-	        CursorDir::Down(x) => self.y += x,
-	        CursorDir::Right(x) => self.x += x,
-	        CursorDir::Left(x) => self.x -= x,
-	    }
-	    CursorDir::move_cursor(dir);
-	}
-
-	fn print(&mut self, c: char) {
-        if self.before_origin() {
-		  print!("{}", c);
-        }
-		self.x += 1;
-	}
-}
-
-#[derive(Copy, Clone, PartialEq)]
-enum CursorDir {
-    Up(i16),
-    Down(i16),
-    Right(i16),
-    Left(i16),
-}
-
-impl CursorDir {
-	fn move_cursor(self) {
-	    print!("{}", self);
-	}
-
-	#[inline(always)]
-	fn save_cursor_pos() {
-	    print!("\x1B7");
-	}
-
-	#[inline(always)]
-	fn ret_cursor_pos() {
-	    print!("\x1B8");
-	}
-}
-
-
-impl fmt::Display for CursorDir {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-	        CursorDir::Up(spaces) => {
-                if spaces < &0 {
-                    write!(f, "\x1B[0A")
-                } else {
-                    write!(f, "\x1B[{}A", spaces)
-                }
-            },
-	        CursorDir::Down(spaces) => {
-                if spaces < &0 {
-                    write!(f, "\x1B[0B")
-                } else {
-                    write!(f, "\x1B[{}B", spaces)
-                }
-            },
-	        CursorDir::Right(spaces) => {
-                if spaces < &0 {
-                    write!(f, "\x1B[0C")
-                } else {
-                    write!(f, "\x1B[{}C", spaces)
-                }
-            },
-	        CursorDir::Left(spaces) => {
-                if spaces < &0 {
-                    write!(f, "\x1B[0D")
-                } else {
-                    write!(f, "\x1B[{}D", spaces)
-                }
-            }
-	    }
-	}
-}
+extern crate graph_vis;
 
 #[derive(Debug)]
 struct Point {
@@ -138,30 +21,30 @@ struct Point {
     y: i16
 }
 
-
 fn main() {
     let mut array_vec: arrayvec::ArrayVec<[i32; 25]> = arrayvec::ArrayVec::new();
     for _ in 0..array_vec.capacity() {
         array_vec.push(rand::thread_rng().gen_range(1, 10));
     }
     let nums: [i32; 25] = array_vec.into_inner().unwrap();
-
+    
+    // uncomment this and comment the previous 5 lines to have a fixed array for testing 
     // let nums: [i32; 14] = [2, 3, 8, 6, 2, 5, 1, 8, 4, 6, 9, 1, 7, 3];
     
     let mut cursor = prep_graph(&nums);
 
     let graph_height = cursor.y as i32;
-    let mut x = 0; // prevents too many calculations from happening by only taking a limited slice (based on what's visible in frame)
-    let mut tt = 0; // the current time dilation (0 - HORIZ_SPACING)
+    let mut x: i16; // prevents too many calculations from happening by only taking a limited slice (based on what's visible in frame)
+    let mut tt: usize; // the current time dilation (0 - HORIZ_SPACING)
 
     for t in 0..60 {
-        clear_graph(&graph_height);
+        clear_graph(graph_height);
 
         // Calculate current time dilation
         tt = t%HORIZ_SPACING;
 
         // Calculate the starting index of the array which should be used to form the current slice
-        x = (t as i16 / HORIZ_SPACING as i16);
+        x = t as i16 / HORIZ_SPACING as i16;
 
         // time dilation should range from 0 to HORIZ_SPACING inclusive.  This is a hacky way around this.
         if t > HORIZ_SPACING && t%HORIZ_SPACING == 0 {
@@ -169,8 +52,8 @@ fn main() {
             tt = HORIZ_SPACING; 
         }
 
-        draw_graph(&mut cursor, &nums[x as usize..], &graph_height, tt);
-        print!("\n");
+        draw_graph(&mut cursor, &nums[x as usize..], graph_height, tt);
+        println!();
         cursor.ret_cursor_pos();
 
         thread::sleep(time::Duration::from_millis(200));
@@ -179,7 +62,7 @@ fn main() {
     println!();
 }
 
-fn prep_graph(arr: &[i32]) -> Cursor {
+fn prep_graph(arr: &[i32]) -> graph_vis::cursor::Cursor {
     let max = find_max(arr);
 
     let y_height = max+2;
@@ -209,31 +92,30 @@ fn prep_graph(arr: &[i32]) -> Cursor {
 
     // Move the cursor to the beginning of the previous line,
     //   drawing occurs relative to the bottom of the graph.
-    CursorDir::move_cursor(CursorDir::Up(3));
+    graph_vis::cursor::CursorDir::move_cursor(graph_vis::cursor::CursorDir::Up(3));
 
-    let cursor = Cursor{x: 0, y: y_height as i16, last_x: 0, last_y: 0, graph_size: sz, cursor_dir: None};
-
-    return cursor
+    // return a cursor object
+    graph_vis::cursor::Cursor{x: 0, y: y_height as i16, last_x: 0, last_y: 0, x_left_boundary: 0, x_right_boundary: sz, cursor_dir: None}
 }
 
-fn clear_graph(graph_height: &i32) {
-    CursorDir::move_cursor(CursorDir::Up(((*graph_height) as i16)-2));
-    for _ in 0..(*graph_height)-2 {
+fn clear_graph(graph_height: i32) {
+    graph_vis::cursor::CursorDir::move_cursor(graph_vis::cursor::CursorDir::Up(((graph_height) as i16)-2));
+    for _ in 0..(graph_height)-2 {
         print!("\x1B[0K|");
-        CursorDir::move_cursor(CursorDir::Down(1));
-        CursorDir::move_cursor(CursorDir::Left(1));
+        graph_vis::cursor::CursorDir::move_cursor(graph_vis::cursor::CursorDir::Down(1));
+        graph_vis::cursor::CursorDir::move_cursor(graph_vis::cursor::CursorDir::Left(1));
     }
 }
 
-fn draw_graph(cursor: &mut Cursor, arr: &[i32], graph_height: &i32, time_delta: usize) {
+fn draw_graph(cursor: &mut graph_vis::cursor::Cursor, arr: &[i32], graph_height: i32, time_delta: usize) {
     for (i, &y) in arr.iter().enumerate() {
         cursor.save_cursor_pos();
 
         // Move up y lines, move right i spaces, print num
-        cursor.move_cur(CursorDir::Up(y as i16));
-        cursor.move_cur(CursorDir::Right((HORIZ_SPACING*(i)+X_BUFFER) as i16 - time_delta as i16));
+        cursor.move_cur(graph_vis::cursor::CursorDir::Up(y as i16));
+        cursor.move_cur(graph_vis::cursor::CursorDir::Right((HORIZ_SPACING*(i)+X_BUFFER) as i16 - time_delta as i16));
 
-        if cursor.past_graph() {
+        if cursor.x > (GRAPH_WIDTH*HORIZ_SPACING) as i16 {
             cursor.ret_cursor_pos();
             break;
         }
@@ -251,17 +133,15 @@ fn draw_graph(cursor: &mut Cursor, arr: &[i32], graph_height: &i32, time_delta: 
 }
 
 
-fn draw_lines(cursor: &mut Cursor, next_point: Point) {
+fn draw_lines(cursor: &mut graph_vis::cursor::Cursor, next_point: Point) {
     let dx = HORIZ_SPACING as i16;
     let dy = (next_point.y as i8 - cursor.y as i8) as i8;
     let distance = ((((dx as i32).pow(2) + (dy as i32).pow(2)) as f64).sqrt()) as i16;
-    
-    cursor.cursor_dir = if dy == 0 {
-        None
-    } else if dy > 0 {
-        Some(CursorDir::Down(1)) // Move cursor down 1 line
-    } else {
-        Some(CursorDir::Up(1)) // Move cursor up 1 line
+   
+    cursor.cursor_dir = match dy.cmp(&0) {
+        Ordering::Less => Some(graph_vis::cursor::CursorDir::Up(1)),
+        Ordering::Greater => Some(graph_vis::cursor::CursorDir::Down(1)),
+        Ordering::Equal => None,
     };
 
     for i in 0..distance-1 {
@@ -272,7 +152,7 @@ fn draw_lines(cursor: &mut Cursor, next_point: Point) {
            (dy as i8).abs() > dx as i8 && 
            (i % (distance as f32/3.0) as i16 == 0 ||
            i % (distance as f32/2.0) as i16 == 0) {
-           	cursor.move_cur(CursorDir::Left(1));
+           	cursor.move_cur(graph_vis::cursor::CursorDir::Left(1));
         }
 
         // Curve the line at the halfway point if it's longer 
@@ -281,28 +161,25 @@ fn draw_lines(cursor: &mut Cursor, next_point: Point) {
         if i != 0  && dy > 0 &&
            (dx as i8) > (1.25*dy as f32) as i8 && 
            i-1 % (distance as f32/2.0) as i16 == 0 {
-           	cursor.move_cur(CursorDir::Up(1));
+           	cursor.move_cur(graph_vis::cursor::CursorDir::Up(1));
         }
 
         // Curve the line at the halfway point if it's longer 
         //   horizontally than vertically and if its
         //   direction is up.
         if i != 0  && dy < 0 &&
-           (-1*dx as i8) < (1.25*dy as f32) as i8 && 
+           (-dx as i8) < (1.25*dy as f32) as i8 && 
            i-1 % (distance as f32/2.0) as i16 == 0 {
-           	cursor.move_cur(CursorDir::Down(1));
+           	cursor.move_cur(graph_vis::cursor::CursorDir::Down(1));
         }
 
         cursor.print(LINE_MARK);
-
-        match cursor.cursor_dir {
-        	Some(_) => cursor.move_cursor(),
-        	_ => {},
-        }
+	
+        if cursor.cursor_dir.is_some() { cursor.move_cursor() }
 
         // If we preemptively reached the next point, no point
         //  in continuing.
-        if cursor.past_graph() {
+        if cursor.x > cursor.x_right_boundary as i16{
             break;
         }
 
@@ -313,21 +190,21 @@ fn draw_lines(cursor: &mut Cursor, next_point: Point) {
         match cursor.cursor_dir {
         	None      => {},
         	Some(dir) => {
-        		if dir == CursorDir::Up(1) && 
+        		if dir == graph_vis::cursor::CursorDir::Up(1) && 
 		           cursor.x != next_point.x && 
 		           cursor.y < next_point.y {
-		            cursor.move_cur(CursorDir::Down(1));
-		        } else if dir == CursorDir::Down(1) && 
+		            cursor.move_cur(graph_vis::cursor::CursorDir::Down(1));
+		        } else if dir == graph_vis::cursor::CursorDir::Down(1) && 
 		          cursor.x != next_point.x && 
 		          cursor.y > next_point.y {
-		            cursor.move_cur(CursorDir::Up(1));
+		            cursor.move_cur(graph_vis::cursor::CursorDir::Up(1));
 		        }
         	},
         }
     }
 }
 
-fn find_min(arr: &[i32]) -> i32 {
+/*fn find_min(arr: &[i32]) -> i32 {
     let mut min = arr[0];
     for &x in arr.iter().skip(1) {
         if x < min {
@@ -335,7 +212,7 @@ fn find_min(arr: &[i32]) -> i32 {
         }
     }
     min
-}
+}*/
 
 
 fn find_max(arr: &[i32]) -> i32 {
